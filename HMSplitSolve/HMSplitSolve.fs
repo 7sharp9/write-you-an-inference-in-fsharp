@@ -1,6 +1,7 @@
 module HMSplitSolve
 open System
 
+
 type TVar = TV of String
 
 type Typ =
@@ -67,9 +68,11 @@ module TypeEnv =
   let toList (env : TypeEnv) = Map.toList env
 
 // Inference state
-type InferState =
-  { count : int }
-  static member initial = {count = 0}
+type InferState() =
+  let current = ref 0
+  member __.incr() = current := !current + 1
+  member __.count = !current
+
 
 type Constraint = (Typ * Typ)
 
@@ -122,3 +125,61 @@ type TypeError =
   | UnboundVariable of string
   | Ambigious of Constraint list
   | UnificationMismatch of Typ[] * Typ[]
+
+let letters =
+  let rec loop i =
+    match i with
+      | i when i < 26 -> string (char (i + 97))
+      | other -> 
+        loop ( (other / 26) - 1) + string(char ((other % 26) + 97)) 
+  Seq.initInfinite ( fun i -> loop i  )
+
+let const' a _ = a
+
+///Given the current inference state return a fresh TVar with updated inference state
+let fresh (s: InferState) =
+  s.incr()
+  TVar(TV (letters |> Seq.item s.count) )
+
+let instanatiate ((vars, t): Scheme) (is: InferState) =
+  let as' = List.map (fun a -> fresh is ) vars
+  let s = Map.ofList <| List.zip vars as'
+  Typ.apply s t
+
+let lookupEnv name env state =
+  match Map.tryFind name env with
+  | Some (s: Scheme) -> instanatiate s state
+  | None -> failwithf "unbound varaible: %A" name
+ 
+///Remove and extend:- remove x from m then add (x, sc)
+let inEnv (x, sc) (m:TypeEnv) = 
+  let scope env =  TypeEnv.extend (TypeEnv.remove env x) (x, sc)
+  scope m
+
+let (++) = List.append
+
+let compose (s1:Subst) (s2: Subst) : Subst =
+  Map.union (Map.map (fun _k v -> Typ.apply s1 v) s2) s1
+
+let rec infer expr env inferState : Typ * Constraint list =
+  match expr with
+  | Lit(LInt _) -> (typeInt, [])
+  | Lit(LBool _) -> (typeBool, [])
+  | Var x ->
+    let t = lookupEnv x env inferState
+    (t, [])
+  | Lam(x, e) ->
+    let tv = fresh inferState
+    let newEnv = inEnv (x, ([], tv)) env
+    let (t, c) = infer e newEnv inferState
+    (TArr(tv, t), c)
+
+   | App(e1, e2) ->
+    let (t1, c1) = infer e1 env inferState
+    let (t2, c2) = infer e2 env inferState
+    let tv = fresh inferState
+    
+    (tv, c1 ++ c2 ++ [t1, TArr(t2, tv)] )
+
+//let inferExpr env expr : Result<Scheme, TypeError> =
+  
