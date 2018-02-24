@@ -3,6 +3,8 @@ open System
 open System.Data
 open System.Collections.Generic
 open System.Data
+open ExtCore
+open System.Collections.Generic
 
 
 type TVar = TV of String
@@ -101,9 +103,9 @@ module Typ =
     | TArr(t1, t2) -> Set.union (ftv t1) (ftv t2)
 
 module Scheme =
-  let apply (s: Subst) ( (vars, t) : Scheme) =
-    let newSubst = List.foldBack (fun k v -> Map.remove k v ) vars s
-    Typ.apply newSubst t
+  let apply (s: Subst) ( (as', t) : Scheme) : Scheme =
+    let s' : Subst = List.foldBack (fun k v -> Map.remove k v ) as' s
+    as', Typ.apply s' t
 
   let ftv ((vars, t): Scheme) =
     Set.difference (Typ.ftv t) (Set.ofList vars)
@@ -119,8 +121,8 @@ module List =
   let private apply apply (s: Subst) xs  =
     List.map (apply s) xs
     
-  let private ftv ftv (xs: Collections.Generic.KeyValuePair<'a,'b> list)  =
-    List.foldBack (fun (KeyValue(_key ,v)) state ->
+  let private ftv ftv xs  =
+    List.foldBack (fun (_key, v) state ->
       Set.union state (ftv v)) xs Set.empty
 
   module Scheme =
@@ -129,21 +131,18 @@ module List =
 
   module Constraint =
     let apply = apply Constraint.apply
-    let ftv = ftv Constraint.ftv
+    let ftv xs = ftv Constraint.ftv xs
 
   module Typ =
     let apply = apply Typ.apply
-    let ftv = ftv Typ.ftv
+    let ftv xs = ftv Typ.ftv xs
 
 module Env =
-  let apply s env =
+  let apply s (env: TypeEnv) : TypeEnv =
     Map.map (fun _k v -> Scheme.apply s v) env
 
-  let ftv env =
-    List.foldBack (fun (KeyValue(_key ,v)) state ->
-      Set.union state (Scheme.ftv v)) env Set.empty
-
-
+  let ftv (env: TypeEnv)  =
+    List.Scheme.ftv (Map.toList env)
 
 type TypeError =
   | UnificationFail of Typ * Type
@@ -172,16 +171,25 @@ let instanatiate ((vars, t): Scheme) (is: InferState) =
   let s = Map.ofList <| List.zip vars as'
   Typ.apply s t
 
+let generalize (env: TypeEnv) t : Scheme =
+  let as' = Set.toList <| Set.difference (Typ.ftv t) (Env.ftv env)
+  (as', t)
+
+///create a localised environment with modifyEnv, then run computation with env
+let private local (modifyEnv: TypeEnv -> TypeEnv) computation env =
+  let newEnv = modifyEnv env
+  computation newEnv
+
+///Remove and extend:- remove x from m then add (x, sc) then run computation `m` in env
+let inEnv (x, sc) (e:TypeEnv) m : Typ * Constraint list = 
+  let scope e =  TypeEnv.extend (TypeEnv.remove e x) (x, sc)
+  local scope m e
+  
 let lookupEnv name env state =
   match Map.tryFind name env with
   | Some (s: Scheme) -> instanatiate s state
   | None -> failwithf "unbound varaible: %A" name
  
-///Remove and extend:- remove x from m then add (x, sc)
-let inEnv (x, sc) (m:TypeEnv) = 
-  let scope env =  TypeEnv.extend (TypeEnv.remove env x) (x, sc)
-  scope m
-
 let (++) = List.append
 
 let compose (s1:Subst) (s2: Subst) : Subst =
@@ -219,27 +227,43 @@ let rec solver ((su, cs) : Unifier) =
       let su1  = unifies t1 t2
       solver (compose su1 su, List.Constraint.apply su1 cs0)
 
-let rec infer expr env inferState : Typ * Constraint list =
+let ops binop =
+  match binop with
+  | Add | Mul | Sub -> TArr(typeInt, TArr(typeInt, typeInt))
+  | Eql -> TArr(typeInt, TArr(typeInt, typeBool))
+
+let rec infer expr inferState env : Typ * Constraint list =
   match expr with
   | Lit(LInt _) -> (typeInt, [])
   | Lit(LBool _) -> (typeBool, [])
   | Var x ->
     let t = lookupEnv x env inferState
     (t, [])
+
   | Lam(x, e) ->
     let tv = fresh inferState
-    let newEnv = inEnv (x, ([], tv)) env
-    let (t, c) = infer e newEnv inferState
+    let (t, c) =  inEnv (x, ([], tv)) env (infer e inferState)
     (TArr(tv, t), c)
 
    | App(e1, e2) ->
-    let (t1, c1) = infer e1 env inferState
-    let (t2, c2) = infer e2 env inferState
+    let (t1, c1) = infer e1 inferState env
+    let (t2, c2) = infer e2 inferState env
     let tv = fresh inferState
     
     (tv, c1 ++ c2 ++ [t1, TArr(t2, tv)] )
 
+   | Let(x, e1, e2) -> 
+     let (t1, c1) = infer e1 inferState env
+     let sub = solver (Map.empty, c1)
+     let sc = generalize (Env.apply sub env) (Typ.apply sub t1)
+     let (t2, c2) = 
+       inEnv (x, sc) env (local (Env.apply sub) (infer e2 inferState))
+     (t2, c1 ++ c2)
 
+   | Fix e1  ->
+     let t1, c1 = infer e1 inferState env
+     let tv = fresh inferState
+     (tv, c1 ++ [(TArr(tv, tv), t1)])
 
 //let inferExpr env expr : Result<Scheme, TypeError> =
   
