@@ -249,7 +249,6 @@ let rec infer expr inferState env : Typ * Constraint list =
     let (t1, c1) = infer e1 inferState env
     let (t2, c2) = infer e2 inferState env
     let tv = fresh inferState
-    
     (tv, c1 ++ c2 ++ [t1, TArr(t2, tv)] )
 
    | Let(x, e1, e2) -> 
@@ -264,6 +263,20 @@ let rec infer expr inferState env : Typ * Constraint list =
      let t1, c1 = infer e1 inferState env
      let tv = fresh inferState
      (tv, c1 ++ [(TArr(tv, tv), t1)])
+
+   | Op(op, e1, e2) ->
+     let (t1, c1) = infer e1 inferState env
+     let (t2, c2) = infer e2 inferState env
+     let tv = fresh inferState
+     let u1 = TArr(t1, TArr(t2, tv))
+     let u2 = ops op
+     (tv, c1 ++ c2 ++ [(u1, u2)])
+
+   | If(cond, tr, fl) ->
+     let (t1, c1) = infer cond inferState env
+     let (t2, c2) = infer tr inferState env
+     let (t3, c3) = infer fl inferState env
+     (t2, c1 ++ c2 ++ c3 ++ [(t1, typeBool); (t2, t3)])
 
 //let inferExpr env expr : Result<Scheme, TypeError> =
   
