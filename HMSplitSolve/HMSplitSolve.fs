@@ -1,10 +1,6 @@
 module HMSplitSolve
 open System
-open System.Data
-open System.Collections.Generic
-open System.Data
 open ExtCore
-open System.Collections.Generic
 
 
 type TVar = TV of String
@@ -78,8 +74,8 @@ type InferState() =
   member __.incr() = current := !current + 1
   member __.count = !current
 
-
 type Constraint = (Typ * Typ)
+
 type ConstraintList = Constraint list
 
 type Subst = Map<TVar,Typ>
@@ -151,6 +147,12 @@ type TypeError =
   | Ambigious of Constraint list
   | UnificationMismatch of Typ[] * Typ[]
 
+// inference ---------------------------------------------
+
+//let runInfer env m =
+
+//let inferExpr env ex =
+
 let letters =
   let rec loop i =
     match i with
@@ -191,41 +193,6 @@ let lookupEnv name env state =
   | None -> failwithf "unbound varaible: %A" name
  
 let (++) = List.append
-
-let compose (s1:Subst) (s2: Subst) : Subst =
-  Map.union (Map.map (fun _k v -> Typ.apply s1 v) s2) s1
-
-let occursCheck a t =
-  Set.contains a (Typ.ftv t)
-
-let bind a t =
-  match a, t with
-  | a, t when (TVar a) == t  -> Map.empty
-  | a, t when occursCheck a t -> failwithf "InfiniteType %A %A"  a t
-  | _otherwise -> Map.singleton a t
-
-let rec unifyMany ts1 ts2 =
-  match ts1, ts2 with
-   | [], [] -> Map.empty
-   | (t1 :: ts1), (t2 :: ts2) ->
-     let su1 = unifies t1 t2
-     let su2 = unifyMany (List.Typ.apply su1 ts1) (List.Typ.apply su1 ts2)
-     compose su2 su1
-   | t1, t2 -> failwithf "UnificationMismatch: %A %A" t1 t2
-
-and unifies t1 t2 =
-  match t1, t2 with
-  | t1, t2 when t1 == t2 -> Map.empty
-  | TVar v, t | t, TVar v -> bind v t
-  | TArr(t1, t2), TArr(t3, t4) -> unifyMany [t1; t2] [t3; t4]
-  | t1, t2 -> failwithf "UnificationFail: %A %A" t1 t2
-
-let rec solver ((su, cs) : Unifier) =
-  match cs with
-    | [] ->  su
-    | ((t1, t2) :: cs0) -> 
-      let su1  = unifies t1 t2
-      solver (compose su1 su, List.Constraint.apply su1 cs0)
 
 let ops binop =
   match binop with
@@ -278,5 +245,53 @@ let rec infer expr inferState env : Typ * Constraint list =
      let (t3, c3) = infer fl inferState env
      (t2, c1 ++ c2 ++ c3 ++ [(t1, typeBool); (t2, t3)])
 
-//let inferExpr env expr : Result<Scheme, TypeError> =
+
+
+// constraint solver -----------------------------
+
+///compose substitutions
+let compose (s1:Subst) (s2: Subst) : Subst =
+  Map.union (Map.map (fun _k v -> Typ.apply s1 v) s2) s1
+
+let occursCheck a t =
+  Set.contains a (Typ.ftv t)
+
+let bind a t =
+  match a, t with
+  | a, t when (TVar a) == t  -> Map.empty
+  | a, t when occursCheck a t -> failwithf "InfiniteType %A %A"  a t
+  | _otherwise -> Map.singleton a t
+
+let rec unifyMany ts1 ts2 =
+  match ts1, ts2 with
+   | [], [] -> Map.empty
+   | (t1 :: ts1), (t2 :: ts2) ->
+     let su1 = unifies t1 t2
+     let su2 = unifyMany (List.Typ.apply su1 ts1) (List.Typ.apply su1 ts2)
+     compose su2 su1
+   | t1, t2 -> failwithf "UnificationMismatch: %A %A" t1 t2
+
+and unifies t1 t2 =
+  match t1, t2 with
+  | t1, t2 when t1 == t2 -> Map.empty
+  | TVar v, t | t, TVar v -> bind v t
+  | TArr(t1, t2), TArr(t3, t4) -> unifyMany [t1; t2] [t3; t4]
+  | t1, t2 -> failwithf "UnificationFail: %A %A" t1 t2
+
+///unification solver
+let rec solver ((su, cs) : Unifier) =
+  match cs with
+    | [] ->  su
+    | ((t1, t2) :: cs0) -> 
+      let su1  = unifies t1 t2
+      solver (compose su1 su, List.Constraint.apply su1 cs0)
+
+//run the constraint solver
+let runSolve cs =
+  let st = (Map.empty, cs)
+  solver st
+
+
+
+
   
