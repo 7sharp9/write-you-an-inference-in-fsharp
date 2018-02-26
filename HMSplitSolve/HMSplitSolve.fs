@@ -2,7 +2,6 @@ module HMSplitSolve
 open System
 open ExtCore
 
-
 type TVar = TV of String
 
 type Typ =
@@ -147,12 +146,6 @@ type TypeError =
   | Ambigious of Constraint list
   | UnificationMismatch of Typ[] * Typ[]
 
-// inference ---------------------------------------------
-
-//let runInfer env m =
-
-//let inferExpr env ex =
-
 let letters =
   let rec loop i =
     match i with
@@ -182,7 +175,7 @@ let private local (modifyEnv: TypeEnv -> TypeEnv) computation env =
   let newEnv = modifyEnv env
   computation newEnv
 
-///Remove and extend:- remove x from m then add (x, sc) then run computation `m` in env
+///remove x from e then add (x, sc) then run computation `m` in env
 let inEnv (x, sc) (e:TypeEnv) m : Typ * Constraint list = 
   let scope e =  TypeEnv.extend (TypeEnv.remove e x) (x, sc)
   local scope m e
@@ -193,6 +186,43 @@ let lookupEnv name env state =
   | None -> failwithf "unbound varaible: %A" name
  
 let (++) = List.append
+
+///compose substitutions
+let compose (s1:Subst) (s2: Subst) : Subst =
+  Map.union (Map.map (fun _k v -> Typ.apply s1 v) s2) s1
+
+let occursCheck a t =
+  Set.contains a (Typ.ftv t)
+
+let bind a t =
+  match a, t with
+  | a, t when (TVar a) == t  -> Map.empty
+  | a, t when occursCheck a t -> failwithf "InfiniteType %A %A"  a t
+  | _otherwise -> Map.singleton a t
+
+let rec unifyMany ts1 ts2 =
+  match ts1, ts2 with
+   | [], [] -> Map.empty
+   | (t1 :: ts1), (t2 :: ts2) ->
+     let su1 = unifies t1 t2
+     let su2 = unifyMany (List.Typ.apply su1 ts1) (List.Typ.apply su1 ts2)
+     compose su2 su1
+   | t1, t2 -> failwithf "UnificationMismatch: %A %A" t1 t2
+
+and unifies t1 t2 =
+  match t1, t2 with
+  | t1, t2 when t1 == t2 -> Map.empty
+  | TVar v, t | t, TVar v -> bind v t
+  | TArr(t1, t2), TArr(t3, t4) -> unifyMany [t1; t2] [t3; t4]
+  | t1, t2 -> failwithf "UnificationFail: %A %A" t1 t2
+
+///unification solver
+let rec solver ((su, cs) : Unifier) =
+  match cs with
+    | [] ->  su
+    | ((t1, t2) :: cs0) -> 
+      let su1  = unifies t1 t2
+      solver (compose su1 su, List.Constraint.apply su1 cs0)
 
 let ops binop =
   match binop with
@@ -264,49 +294,41 @@ let normalize ((_, body) :Scheme) : Scheme =
         | None -> failwith "type variable not in signature"
   List.map snd ord, normType body
 
-// constraint solver -----------------------------
-
-///compose substitutions
-let compose (s1:Subst) (s2: Subst) : Subst =
-  Map.union (Map.map (fun _k v -> Typ.apply s1 v) s2) s1
-
-let occursCheck a t =
-  Set.contains a (Typ.ftv t)
-
-let bind a t =
-  match a, t with
-  | a, t when (TVar a) == t  -> Map.empty
-  | a, t when occursCheck a t -> failwithf "InfiniteType %A %A"  a t
-  | _otherwise -> Map.singleton a t
-
-let rec unifyMany ts1 ts2 =
-  match ts1, ts2 with
-   | [], [] -> Map.empty
-   | (t1 :: ts1), (t2 :: ts2) ->
-     let su1 = unifies t1 t2
-     let su2 = unifyMany (List.Typ.apply su1 ts1) (List.Typ.apply su1 ts2)
-     compose su2 su1
-   | t1, t2 -> failwithf "UnificationMismatch: %A %A" t1 t2
-
-and unifies t1 t2 =
-  match t1, t2 with
-  | t1, t2 when t1 == t2 -> Map.empty
-  | TVar v, t | t, TVar v -> bind v t
-  | TArr(t1, t2), TArr(t3, t4) -> unifyMany [t1; t2] [t3; t4]
-  | t1, t2 -> failwithf "UnificationFail: %A %A" t1 t2
-
-///unification solver
-let rec solver ((su, cs) : Unifier) =
-  match cs with
-    | [] ->  su
-    | ((t1, t2) :: cs0) -> 
-      let su1  = unifies t1 t2
-      solver (compose su1 su, List.Constraint.apply su1 cs0)
+//Canonicalize and return the polymorphic toplevel type.
+//closeOver :: Type -> Scheme
+let closeOver typ =
+  normalize <| generalize Map.empty typ
 
 //run the constraint solver
 let runSolve cs =
   let st = (Map.empty, cs)
   solver st
+
+let inferExpr env ex inferState : Scheme =
+  let (ty, cs) = infer ex inferState env 
+  let subst = runSolve cs
+  closeOver (Typ.apply subst ty)
+
+let rec inferTop env xs inferState =
+  match env, xs with
+  | _, [] -> env
+  | env, ((name, ex):: xs) ->
+    let ty = inferExpr env ex inferState
+    inferTop (TypeEnv.extend env (name, ty)) xs inferState
+
+// Return the internal constraints used in solving for the type of an expression
+//constraintsExpr :: Env -> Expr -> Either TypeError ([Constraint], Subst, Type, Scheme)
+let constraintsExpr env expr inferState : (Constraint list * Subst * Typ * Scheme) =
+  let ty, cs = infer expr env inferState
+  let subst = runSolve cs
+  let sc = closeOver (Typ.apply subst ty)
+  (cs, subst, ty, sc)
+
+
+
+
+
+
 
 
 
