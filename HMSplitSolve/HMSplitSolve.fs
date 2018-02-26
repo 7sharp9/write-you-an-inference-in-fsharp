@@ -245,7 +245,24 @@ let rec infer expr inferState env : Typ * Constraint list =
      let (t3, c3) = infer fl inferState env
      (t2, c1 ++ c2 ++ c3 ++ [(t1, typeBool); (t2, t3)])
 
-
+let normalize ((_, body) :Scheme) : Scheme =
+  let rec fv typ =
+    match typ with
+    | TVar a -> [a]
+    | TArr(a, b) -> fv a ++ fv b
+    | TCon _ -> []
+  let ord = 
+    List.distinct (fv body)
+    |> List.mapi (fun i v -> v,  TV <| Seq.item i letters)
+  let rec normType typ =
+    match typ with
+    | TArr(a, b) -> TArr(normType a, normType b)
+    | TCon a -> TCon a
+    | TVar a -> 
+        match Map.ofList ord |> Map.tryFind a with
+        | Some x -> TVar x
+        | None -> failwith "type variable not in signature"
+  List.map snd ord, normType body
 
 // constraint solver -----------------------------
 
