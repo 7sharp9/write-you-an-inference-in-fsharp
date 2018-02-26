@@ -318,8 +318,8 @@ let rec inferTop env xs inferState =
 
 // Return the internal constraints used in solving for the type of an expression
 //constraintsExpr :: Env -> Expr -> Either TypeError ([Constraint], Subst, Type, Scheme)
-let constraintsExpr env expr inferState : (Constraint list * Subst * Typ * Scheme) =
-  let ty, cs = infer expr env inferState
+let constraintsExpr expr env inferstate : (Constraint list * Subst * Typ * Scheme) =
+  let ty, cs = infer expr inferstate env
   let subst = runSolve cs
   let sc = closeOver (Typ.apply subst ty)
   (cs, subst, ty, sc)
