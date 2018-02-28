@@ -17,7 +17,7 @@ Heres what we have so far, I have written all of these but not yet committed all
 
 ## Basic Hindley-Milner inference
   * Pure implmentation no optimisations
-  * [Pure implmentation with seperate constraint gathering and solving](Hindley-Milner-Split-Solver)
+  * [Pure implmentation with seperate constraint gathering and solving](Hindley-Milner-Split-Solver.md)
   * Mutable implementation with rank optimisations
   
 ## Basic Hindley-Milner inference with row polymorphism
