@@ -13,13 +13,11 @@ and variant polymorphism which should allow some interesting effects.  _(Namely 
 The algorithms have been implemented from various sources and papers which I will 
 add in due course, but for now here is the different variations planned.  
 
-Heres what we have so far, I have written all of these but not yet committed all the code.  
-I decided to start this repo half way through writing the seperate constraint gathering 
-and solving implementation.
+Heres what we have so far, I have written all of these but not yet committed all the code:
 
 ## Basic Hindley-Milner inference
   * Pure implmentation no optimisations
-  * Pure implmentation with seperate constraint gathering and solving
+  * Pure implmentation with seperate constraint gathering and solving [h]
   * Mutable implementation with rank optimisations
   
 ## Basic Hindley-Milner inference with row polymorphism
