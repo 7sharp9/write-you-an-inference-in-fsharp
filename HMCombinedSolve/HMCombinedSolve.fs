@@ -16,19 +16,12 @@ and prim =
     | Int of int
     | Bool of bool
     | Cond
-    | RecordSelect of label
-    | RecordExtend of label
-    | RecordRestrict of label
-    | RecordEmpty
 
 type Typ =
     | TVar of name
     | TInt
     | TBool
     | TFun of Typ * Typ
-    | TRecord of Typ
-    | TRowEmpty
-    | TRowExtend of label * Typ * Typ
 
 type Scheme = Scheme of name list * Typ
 
@@ -43,9 +36,6 @@ module Typ =
         | TInt -> Set.empty
         | TBool -> Set.empty
         | TFun(t1, t2) -> Set.union (ftv t1) (ftv t2)
-        | TRecord typ -> ftv typ
-        | TRowEmpty -> Set.empty
-        | TRowExtend (_l, t, r) -> Set.union (ftv r) (ftv t)
     
     let rec apply s typ =
         match typ with
@@ -55,11 +45,7 @@ module Typ =
             | None -> TVar n
         | TFun(t1, t2) ->
             TFun (apply s t1, apply s t2)
-        | TRecord t ->
-            TRecord (apply s t)
-        | TRowExtend (l, t, r) ->
-            TRowExtend(l, apply s t, apply s r)
-        | TInt | TBool | TRowEmpty ->
+        | TInt | TBool ->
             typ
 
     let parens s =
@@ -79,11 +65,6 @@ module Typ =
             | TBool -> "bool"
             | TFun(t, s) ->
                 (parenType t) + " -> " + (toString s)
-            | TRecord typ ->
-                sprintf "{ %s }" ( toString typ)
-            | TRowEmpty -> "{ }"
-            | TRowExtend (label, typ, row) ->
-                sprintf "%s = %s | %s" label (toString typ) (toString row) 
 
 module Scheme =
    let ftv (scheme: Scheme) =
@@ -142,22 +123,6 @@ let instantiate (ts : Scheme) =
         let s = List.zip vars nvars |> Map.ofList
         Typ.apply s t
 
-let rec rewriteRow (row: Typ) newLabel =
-    match row with
-    | TRowEmpty -> failwithf "label %s cannot be inserted" newLabel
-    | TRowExtend(label, fieldTy, rowTail) when newLabel = label ->
-        (fieldTy, rowTail, Map.empty) //nothing to do
-    | TRowExtend(label, fieldTy, rowTail) ->
-        match rowTail with
-        | TVar alpha ->
-             let beta  = newTyVar "r"
-             let gamma = newTyVar "a"
-             gamma, TRowExtend(label, fieldTy, beta), Map.singleton alpha (TRowExtend(newLabel, gamma, beta))     
-        | _otherwise ->
-            let (fieldTy', rowTail', s) = rewriteRow rowTail newLabel
-            fieldTy', TRowExtend(label, fieldTy, rowTail'), s
-    | _ -> failwithf "Unexpected type: %A" row
-
 let varBind u t =
     match t with
     | TVar name when name = u -> Map.empty
@@ -175,28 +140,6 @@ let rec unify (t1 : Typ) (t2 : Typ) : Subst =
     | t, TVar u -> varBind u t
     | TInt, TInt -> Map.empty
     | TBool, TBool -> Map.empty
-    | TRecord row1, TRecord row2 ->
-         unify row1 row2
-    | TRowEmpty, TRowEmpty -> Map.empty
-    | TRowExtend(label1, fieldTyp1, rowTail1), (TRowExtend(_,_,_) as row2) ->
-        let fieldTy2, rowTail2, theta1 = rewriteRow row2 label1
-        let rec toList ty =
-            match ty with
-            | TVar name -> [], Some name
-            | TRowEmpty -> [], None
-            | TRowExtend(l, t, r) ->
-                let ls, mv = toList r
-                (l, t) :: ls, mv
-            | _ -> failwithf "invalid row tail %A" ty
-        let result = toList rowTail1
-        match snd result with
-        | Some tv when theta1 |> Map.containsKey tv ->
-            failwithf "recursive row type"
-        | _ -> 
-            let theta2 = unify (Typ.apply theta1 fieldTyp1) (Typ.apply theta1 fieldTy2)
-            let s = Subst.compose theta2 theta1
-            let theta3 = unify (Typ.apply s rowTail1) (Typ.apply s rowTail2)
-            Subst.compose theta3 s
     | _ -> failwithf "Types do not unify: %A vs %A" t1 t2
 
 let tiPrim prim =
@@ -206,20 +149,6 @@ let tiPrim prim =
     | Cond -> 
         let a = newTyVar "a"
         TFun(TBool, TFun(a, TFun(a, a)))
-    | RecordEmpty ->
-        TRecord TRowEmpty
-    | RecordSelect label -> 
-        let a = newTyVar "a"
-        let r = newTyVar "r"
-        TFun (TRecord (TRowExtend(label, a, r)) , a)
-    | RecordExtend label  ->
-        let a = newTyVar "a"
-        let r = newTyVar "r"
-        TFun(a, TFun(TRecord r, TRecord(TRowExtend(label, a, r) )))
-    | RecordRestrict label ->
-        let a = newTyVar "a"
-        let r = newTyVar "r"
-        TFun(TRecord(TRowExtend(label, a, r)), TRecord r)
 
 let rec ti (env : TypeEnv) (exp : exp) : Subst * Typ =
     match exp with
