@@ -54,8 +54,6 @@ let main argv =
         "fun x -> let y = x in y",
         Fun(["x"], Let("y", Var "x", Var "y"))
 
-
-
     let testBank = [example1; example2; example3; example4; example5]
 
     let runTestBank bank printResult =
