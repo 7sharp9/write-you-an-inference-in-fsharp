@@ -32,5 +32,5 @@ also targetting the arm platform via LLVM.  While reading one of the papers on r
 >Considering how many papers there are on type systems, there is surprising little 
 literature on type inference that is aimed unambiguously at implementors.
   
-I'll also add some notes on type systems, reserch paper references and description of 
+I'll also add some notes on type systems, research paper references and description of 
 terms written in normal basic language, I may cross reference in my blog, Ive not yet decided.
