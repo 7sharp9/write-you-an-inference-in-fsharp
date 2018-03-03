@@ -1,4 +1,4 @@
-module HMCombinedSolve
+module HMPure
 open System
 open ExtCore
 

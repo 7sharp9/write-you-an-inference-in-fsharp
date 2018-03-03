@@ -1,5 +1,5 @@
 ﻿open System
-open HMCombinedSolve
+open HMPure
 
 [<EntryPoint>]
 let main argv =
@@ -30,12 +30,12 @@ let main argv =
 
     let runTestBank bank printResult =
       bank
-      |> List.iter (fun (name, exp) -> HMCombinedSolve.resetId()
-                                       let result = HMCombinedSolve.typeInference Map.empty exp
+      |> List.iter (fun (name, exp) -> HMPure.resetId()
+                                       let result = HMPure.typeInference Map.empty exp
                                        if printResult then
                                             printfn "%s" name
                                             printfn "Expression: %A" exp
-                                            printfn "inferred: %s\n" (HMCombinedSolve.Typ.toString result))
+                                            printfn "inferred: %s\n" (HMPure.Typ.toString result))
 
     //run through the tests as a warm up
     runTestBank testBank true
