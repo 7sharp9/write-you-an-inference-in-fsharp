@@ -40,7 +40,7 @@ let main argv =
                                        if printResult then
                                             printfn "%s" name
                                             printfn "Expression: %s" (HMMutable.exp.toString exp)
-                                            printfn "Infered: %s" (HMMutable.ty.toString generalizedTy) )
+                                            printfn "Infered: %s\n" (HMMutable.ty.toString generalizedTy) )
 
     //run through the tests as a warm up
     runTestBank testBank true
