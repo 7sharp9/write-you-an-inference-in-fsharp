@@ -4,42 +4,18 @@ open HMMutable
 [<EntryPoint>]
 let main argv =
 
-    // let b1 =
-    //     "b1", ELet ("id", EAbs("x", EVar "x"), EVar "id")
-
-    // let b2 =
-    //     "b2", ELet ("id", EAbs( "x", EVar "x"), EApp(EVar "id", EVar "id"))
-
-    // let b3 =
-    //     "b3", ELet( "id", (EAbs("x", ELet( "y", EVar "x", EVar "y"))), EApp(EVar "id", EVar "id"))
-
-    // let b4 =
-    //     "b4", ELet( "id", EAbs( "x", ELet("y", EVar "x", EVar "y")),    EApp(EApp(EVar "id", EVar "id") ,EPrim (Int 2)))
-
-    // let b5 =
-    //     "b5", ELet("id", EAbs( "x", EApp(EVar "x", EVar "x")), EVar "id")
-
-    // let b6 =
-    //     "b6", EAbs("m", (ELet("y", EVar "m", ELet("x", (EApp(EVar "y", EPrim(Bool true))), EVar "x"))))
-
-    // let b7 =
-    //       "b6: fun f -> (fun g -> (fun arg (f g arg)))",
-    //       EAbs("f", EAbs("g", EAbs("arg", EApp(EVar("g"), EApp(EVar("f"), EVar("arg"))))))
-
     let example1 =
         "let f = fun x y -> g(x, y) in f(a, b)",
         Fun([("a")], Var(("a") ))
 
     let example2 =
-        "compose or (>>)",
-        Let("compose",
-            Fun(["f"], 
-                Fun(["g"], 
-                    Fun (["x"], 
-                        Call(Var "g",[Call(Var "f", [Var "x"])])
-                    )
+        "fun f -> (fun g -> (fun arg (f g arg)))",
+        Fun(["f"], 
+            Fun(["g"], 
+                Fun (["arg"], 
+                    Call(Var "g",[Call(Var "f", [Var "arg"])])
                 )
-            ), Var "compose"
+            )
         )
 
     let example3 =
