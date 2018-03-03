@@ -16,9 +16,9 @@ add in due course, but for now here is the different variations planned.
 Heres what we have so far, I have written all of these but not yet committed all the code:
 
 ## Basic Hindley-Milner inference
-  * [Pure implmentation with combined constraints and solving](Hindley-Milner-Combined-Solver.md)
+  * [Pure implmentation with combined constraints and solving](Hindley-Milner-Pure.md)
   * [Pure implmentation with seperate constraint gathering and solving](Hindley-Milner-Split-Solver.md)
-  * Mutable implementation with rank optimisations
+  * [Mutable implementation with rank optimisations](Hindley-Milner-Mutable.md)
   
 ## Basic Hindley-Milner inference with row polymorphism
   * Hindley-Milner inference with row polymorphism extension _(duplicate lables allowed)_
