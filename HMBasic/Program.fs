@@ -97,7 +97,7 @@ let main argv =
       bank
       |> List.iter (fun (name, exp) -> nextVariableId := 0
                                        let result =
-                                         try Result.Ok (analyse exp basicEnv)
+                                         try Ok (analyse exp basicEnv)
                                          with ex -> Result.Error (ex.Message)
                                        if printResult then
                                             printfn "%s" name
