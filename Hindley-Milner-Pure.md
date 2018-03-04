@@ -1,1 +1,3 @@
-# Hindley Milner with combined constraint and solving
+# Hindley Milner pure implementation
+
+This implementation
