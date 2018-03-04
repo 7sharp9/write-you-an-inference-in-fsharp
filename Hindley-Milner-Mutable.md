@@ -1,6 +1,6 @@
 # Hindley Milner Mutable inference
 
-This implementation is based on algorithm w from [tomprimozic/type-systems/algorithm_w](https://github.com/tomprimozic/type-systems/tree/master/algorithm_w)
+This implementation is based on algorithm w from [tomprimozic/type-systems/algorithm_w](https://github.com/tomprimozic/type-systems/tree/master/algorithm_w), the code is located in [HMMutable](HMMutable/).
 
 This implementation uses several optimizations over a naive implementation. 
 Instead of explicit substitutions when unifying the types it uses updateable references. 
