@@ -1,6 +1,6 @@
 # Hindley Milner pure implementation with row polymorphism
 
-This implementation is based on [Algorithm W step by step](ttps://github.com/wh5a/Algorithm-W-Step-By-Step/blob/master/AlgorithmW.pdf) by Martin Grabmuller with the addition of row polymorphism.  If you compare this implementation with [HMPure](HMPure/) you should be able to see the row polymorphism additions.  
+This implementation is based on [Algorithm W step by step](ttps://github.com/wh5a/Algorithm-W-Step-By-Step/blob/master/AlgorithmW.pdf) by Martin Grabüller with the addition of row polymorphism.  If you compare this implementation with [HMPure](HMPure/) you should be able to see the row polymorphism additions.  
 
 ## Code
 
