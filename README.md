@@ -8,7 +8,7 @@ types and methods of doing type inference.
 The algorithms are split into pure and mutable Hindley-Milner type inference and row polymorphism extension to it.
 
 ## Hindley-Milner inference
-  * [Basic implementation based on Luca Cardellis paper](Hindley-Milner inference.md)
+  * [Basic implementation based on Luca Cardellis paper](Hindley-Milner-Basic.md)  
   * [Pure implmentation with combined constraints and solving](Hindley-Milner-Pure.md)
   * [Pure implmentation with separate constraint gathering and solving](Hindley-Milner-Split-Solver.md)
   * [Mutable implementation with rank optimisations](Hindley-Milner-Mutable.md)
