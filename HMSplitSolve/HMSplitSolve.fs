@@ -323,14 +323,3 @@ let constraintsExpr expr env inferstate : (Constraint list * Subst * Typ * Schem
   let subst = runSolve cs
   let sc = closeOver (Typ.apply subst ty)
   (cs, subst, ty, sc)
-
-
-
-
-
-
-
-
-
-
-  
