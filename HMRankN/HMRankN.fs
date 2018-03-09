@@ -76,18 +76,15 @@ let metaTvs types =
     List.foldBack go types []
 
 let freeTyVars tys =
-  let rec go bound ty acc =
-    match bound, ty, acc with
-    | bound, TyVar tv, acc ->
-      match tv with
-      | tv when List.contains tv bound -> acc
-      | tv when List.contains tv acc -> acc
-      | _otherwise -> tv :: acc
-    | bound, MetaTv _, acc -> acc
-    | bound, TyCon _, acc -> acc
-    | bound, Fun(arg, res), acc -> go bound arg (go bound res acc)
-    | bound, ForAll(tvs, ty), acc -> go (tvs ++ bound) ty acc
-    
-
-  List.foldBack (go []) tys []
-
+    let rec go bound ty acc =
+        match bound, ty, acc with
+        | bound, TyVar tv, acc ->
+            match tv with
+            | tv when List.contains tv bound -> acc
+            | tv when List.contains tv acc -> acc
+            | _otherwise -> tv :: acc
+        | _bound, MetaTv _, acc -> acc
+        | _bound, TyCon _, acc -> acc
+        | bound, Fun(arg, res), acc -> go bound arg (go bound res acc)
+        | bound, ForAll(tvs, ty), acc -> go (List.append tvs bound) ty acc
+    List.foldBack (go []) tys []
