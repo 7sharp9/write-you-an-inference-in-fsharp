@@ -1,6 +1,8 @@
 module HMRankN
 open System
 open ExtCore
+open System
+open System.Diagnostics.Tracing
 
 type Name = String
 type Uniq = int
@@ -13,10 +15,10 @@ type TyCon = IntT | BoolT | Pair2T
 
 type Typ =
     | ForAll of TyVar list * Rho //Forall type
-    | Fun of  Typ * Typ        // Function type
+    | Fun of  Typ * Typ          // Function type
     | TyCon of TyCon             // Type constants
     | TyVar of TyVar             // Always bound by a ForAll
-    | MetaTv of MetaTv          // A meta type variable
+    | MetaTv of MetaTv           // A meta type variable
 
 and Rho = Typ //No top-level ForAll
 and Tau = Typ //No ForAlls anywhere
@@ -75,7 +77,11 @@ let metaTvs types =
         | ForAll(_, ty), acc -> go ty acc //ForAll binds TyVars only
     List.foldBack go types []
 
+///Get the free TyVars from a type; no duplicates in result
 let freeTyVars tys =
+    //Ignore occurrences of bound type variables
+    //Type to look at
+    //Accumulates result
     let rec go bound ty acc =
         match bound, ty, acc with
         | bound, TyVar tv, acc ->
@@ -88,3 +94,88 @@ let freeTyVars tys =
         | bound, Fun(arg, res), acc -> go bound arg (go bound res acc)
         | bound, ForAll(tvs, ty), acc -> go (List.append tvs bound) ty acc
     List.foldBack (go []) tys []
+
+///Get all the binders used in ForAlls in the type, so that
+///when quantifying an outer for-all we can avoid these inner ones
+let tyVarBndrs ty =
+    let rec bndrs ty =
+        match ty with
+        | ForAll(tvs, body) -> List.append tvs (bndrs body)
+        | Fun(arg, res) -> List.append (bndrs arg) (bndrs res)
+        | _ -> []
+    List.distinct (bndrs ty)
+
+let tyVarName = function
+    | BoundTv n -> n
+    | SkolemTv(n, _) -> n
+
+type Env = (TyVar * Tau) list
+
+let rec subst_ty (env:Env) tv =
+    match tv with
+    | Fun(arg, res)   -> Fun( (subst_ty env arg), (subst_ty env res))
+    | TyVar n         -> match List.tryFind (fun (k,_v) -> k = n ) env with
+                         | Some (_k,v) -> v
+                         | None -> TyVar n
+    | MetaTv tv       -> MetaTv tv
+    | TyCon tc        -> TyCon tc
+    | ForAll(ns, rho) ->
+        let env' =
+            //perf: Set.intersection?
+            [for (n, ty') in env do
+                if not (List.contains n ns) then
+                    yield n, ty' ]
+        ForAll(ns, (subst_ty env' rho))
+
+and substTy tvs tys ty =
+    subst_ty (List.zip tvs tys) ty
+
+//Pretty printing omitted---------------------
+
+//monad.hs
+type TcEnv = { uniqs : Uniq ref;             // Unique supply
+               var_env :  Map<Name,Sigma> }  // Type environment for term variables
+
+//Dealing with the type environment-----------
+
+let extendVarEnv var ty (env:TcEnv) =
+    let extend (env:TcEnv) =
+        { env with var_env = Map.add var ty env.var_env }
+    extend env
+
+let newTcRef v =
+    ref v
+
+let lookupVar n (env:Map<Name,Sigma>) =
+    match Map.tryFind n env with
+    | Some ty -> ty
+    | None -> failwithf "Not in scope:'%A'" n
+
+//Creating, reading, writing MetaTvs----------
+
+let newUnique (tcenv:TcEnv) =
+    let uniq = !tcenv.uniqs
+    incr tcenv.uniqs
+    uniq
+
+let newMetaTyVar tcenv =
+    let uniq = newUnique tcenv
+    let tref = newTcRef None 
+    Meta(uniq, tref)
+
+let newTyVarTy tcenv =
+    let tv = newMetaTyVar tcenv
+    MetaTv tv
+
+let newSkolemTyVar tv tcenv =
+    let uniq = newUnique tcenv
+    SkolemTv((tyVarName tv), uniq)
+
+//nstantiate the topmost for-alls of the argument type
+//with flexible type variables
+let instantiate (ty:Sigma) tcenv : Rho =
+    match ty with
+    | ForAll(tvs, ty) ->
+        let tvs' = List.map (fun _ -> newMetaTyVar tcenv) tvs
+        substTy tvs (List.map MetaTv tvs') ty
+    | _ -> ty
