@@ -3,6 +3,7 @@ open System
 open ExtCore
 open System
 open System.Diagnostics.Tracing
+open System.Diagnostics
 
 type Name = String
 type Uniq = int
@@ -167,7 +168,7 @@ let newTyVarTy tcenv =
     let tv = newMetaTyVar tcenv
     MetaTv tv
 
-let newSkolemTyVar tv tcenv =
+let newSkolemTyVar tcenv tv =
     let uniq = newUnique tcenv
     SkolemTv((tyVarName tv), uniq)
 
@@ -179,3 +180,18 @@ let instantiate (ty:Sigma) tcenv : Rho =
         let tvs' = List.map (fun _ -> newMetaTyVar tcenv) tvs
         substTy tvs (List.map MetaTv tvs') ty
     | _ -> ty
+
+///Performs deep skolemisation, retuning the 
+///skolem constants and the deepskold type
+//deepskol :: Sigma -> Tc ([TyVar], Rho)
+let rec deepskol tcenv (ty: Sigma) =
+    match ty with
+    | ForAll(tvs, ty) -> // Rule PRPOLY
+        let sks1 = List.map (newSkolemTyVar tcenv) tvs
+        let (sks2, ty') = deepskol tcenv (substTy tvs (List.map TyVar sks1) ty)
+        List.append sks1 sks2, ty'
+    | Fun(arg_ty, res_ty) -> // Rule PRFUN
+        let sks, res_ty' = deepskol tcenv res_ty
+        sks, Fun(arg_ty, res_ty')
+    | ty -> // Rule PRMONO
+        [], ty
