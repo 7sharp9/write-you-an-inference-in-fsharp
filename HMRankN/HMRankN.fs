@@ -195,3 +195,10 @@ let rec deepskol tcenv (ty: Sigma) =
         sks, Fun(arg_ty, res_ty')
     | ty -> // Rule PRMONO
         [], ty
+
+let shallowskol (ty : Sigma) tcenv =
+    match ty with
+    | ForAll(tvs, ty) ->
+        let sks1 = List.map (newSkolemTyVar tcenv) tvs
+        sks1, ty
+    | _ -> [], ty
