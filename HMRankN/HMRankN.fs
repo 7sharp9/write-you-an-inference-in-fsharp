@@ -201,4 +201,17 @@ let shallowskol (ty : Sigma) tcenv =
     | ForAll(tvs, ty) ->
         let sks1 = List.map (newSkolemTyVar tcenv) tvs
         sks1, ty
-    | _ -> [], ty
+    | _ -> [], 
+
+///reference implementation is allBinders :: [TyVar]    // a,b,..z, a1, b1,... z1, a2, b2,... 
+///This one is currently a,b,..z, aa, ab,... az, ba, bb,...
+/// mainly because I already have that implementation finished
+let allBinders =
+  let rec loop i =
+    match i with
+      | i when i < 26 -> BoundTv <| string (char (i + 97))
+      | other -> 
+        loop ( (other / 26) - 1) + string(char ((other % 26) + 97)) 
+  Seq.initInfinite ( fun i -> loop i  )
+
+
