@@ -182,7 +182,7 @@ let instantiate (ty:Sigma) tcenv : Rho =
     | _ -> ty
 
 ///Performs deep skolemisation, retuning the 
-///skolem constants and the deepskold type
+///skolem constants and the deepskol type
 //deepskol :: Sigma -> Tc ([TyVar], Rho)
 let rec deepskol tcenv (ty: Sigma) =
     match ty with
@@ -203,15 +203,14 @@ let shallowskol (ty : Sigma) tcenv =
         sks1, ty
     | _ -> [], 
 
-///reference implementation is allBinders :: [TyVar]    // a,b,..z, a1, b1,... z1, a2, b2,... 
-///This one is currently a,b,..z, aa, ab,... az, ba, bb,...
-/// mainly because I already have that implementation finished
+//reference implementation is allBinders :: [TyVar]
+// a,b,..z, a1, b1,... z1, a2, b2,... 
 let allBinders =
   let rec loop i =
     match i with
-      | i when i < 26 -> BoundTv <| string (char (i + 97))
+      | i when i < 26 -> TyVar <| string (char (i + 97))
       | other -> 
-        loop ( (other / 26) - 1) + string(char ((other % 26) + 97)) 
+          TyVar <| string (other / 26) + string(char ((other % 26) + 97)) 
   Seq.initInfinite ( fun i -> loop i  )
 
 
