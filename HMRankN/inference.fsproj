@@ -5,6 +5,7 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Prelude.fs" />
     <Compile Include="HMRankN.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
