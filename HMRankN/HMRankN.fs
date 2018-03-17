@@ -93,7 +93,7 @@ let freeTyVars tys =
         | _bound, MetaTv _, acc -> acc
         | _bound, TyCon _, acc -> acc
         | bound, Fun(arg, res), acc -> go bound arg (go bound res acc)
-        | bound, ForAll(tvs, ty), acc -> go (List.append tvs bound) ty acc
+        | bound, ForAll(tvs, ty), acc -> go (tvs ++ bound) ty acc
     List.foldBack (go []) tys []
 
 ///Get all the binders used in ForAlls in the type, so that
@@ -101,8 +101,8 @@ let freeTyVars tys =
 let tyVarBndrs ty =
     let rec bndrs ty =
         match ty with
-        | ForAll(tvs, body) -> List.append tvs (bndrs body)
-        | Fun(arg, res) -> List.append (bndrs arg) (bndrs res)
+        | ForAll(tvs, body) -> tvs ++ (bndrs body)
+        | Fun(arg, res) -> (bndrs arg) ++ (bndrs res)
         | _ -> []
     List.distinct (bndrs ty)
 
@@ -172,6 +172,9 @@ let newSkolemTyVar tcenv tv =
     let uniq = newUnique tcenv
     SkolemTv((tyVarName tv), uniq)
 
+let writeTv (Meta(_, ref)) (ty: Tau) = 
+    writeTcRef ref (Some ty)
+
 //nstantiate the topmost for-alls of the argument type
 //with flexible type variables
 let instantiate (ty:Sigma) tcenv : Rho =
@@ -189,7 +192,7 @@ let rec deepskol tcenv (ty: Sigma) =
     | ForAll(tvs, ty) -> // Rule PRPOLY
         let sks1 = List.map (newSkolemTyVar tcenv) tvs
         let (sks2, ty') = deepskol tcenv (substTy tvs (List.map TyVar sks1) ty)
-        List.append sks1 sks2, ty'
+        sks1 ++ sks2, ty'
     | Fun(arg_ty, res_ty) -> // Rule PRFUN
         let sks, res_ty' = deepskol tcenv res_ty
         sks, Fun(arg_ty, res_ty')
@@ -209,8 +212,7 @@ let allBinders =
   let rec loop i =
     match i with
       | i when i < 26 -> TyVar <| string (char (i + 97))
-      | other -> 
-          TyVar <| string (other / 26) + string(char ((other % 26) + 97)) 
+      | other -> TyVar <| string (other / 26) + string(char ((other % 26) + 97)) 
   Seq.initInfinite ( fun i -> loop i  )
 
 
