@@ -254,3 +254,9 @@ let getEnvTypes env : Typ list =
     // Get just the types mentioned in the environment
     Map.values env |> Set.toList
     
+/// This function takes account of zonking, and returns a set
+/// (no duplicates) of unbound meta-type variables
+let getMetaTyVars tys : MetaTv list = 
+    let tys' = List.map zonkType tys
+    metaTvs tys'
+                       
