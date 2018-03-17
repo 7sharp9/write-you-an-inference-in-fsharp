@@ -78,7 +78,7 @@ let metaTvs types =
         | ForAll(_, ty), acc -> go ty acc //ForAll binds TyVars only
     List.foldBack go types []
 
-///Get the free TyVars from a type; no duplicates in result
+/// Get the free TyVars from a type; no duplicates in result
 let freeTyVars tys =
     //Ignore occurrences of bound type variables
     //Type to look at
@@ -96,8 +96,8 @@ let freeTyVars tys =
         | bound, ForAll(tvs, ty), acc -> go (List.append tvs bound) ty acc
     List.foldBack (go []) tys []
 
-///Get all the binders used in ForAlls in the type, so that
-///when quantifying an outer for-all we can avoid these inner ones
+/// Get all the binders used in ForAlls in the type, so that
+/// when quantifying an outer for-all we can avoid these inner ones
 let tyVarBndrs ty =
     let rec bndrs ty =
         match ty with
@@ -179,8 +179,8 @@ let readTv (metatv: MetaTv) : Tau option =
     match metatv with
     | Meta(_, ref) -> !ref
 
-//nstantiate the topmost for-alls of the argument type
-//with flexible type variables
+/// Instantiate the topmost for-alls of the argument type
+/// with flexible type variables
 let instantiate (ty:Sigma) tcenv : Rho =
     match ty with
     | ForAll(tvs, ty) ->
@@ -188,9 +188,8 @@ let instantiate (ty:Sigma) tcenv : Rho =
         substTy tvs (List.map MetaTv tvs') ty
     | _ -> ty
 
-///Performs deep skolemisation, retuning the 
-///skolem constants and the deepskol type
-//deepskol :: Sigma -> Tc ([TyVar], Rho)
+/// Performs deep skolemisation, retuning the 
+/// skolem constants and the deepskol type
 let rec deepskol tcenv (ty: Sigma) =
     match ty with
     | ForAll(tvs, ty) -> // Rule PRPOLY
@@ -210,8 +209,7 @@ let shallowskol (ty : Sigma) tcenv =
         sks1, ty
     | _ -> [], ty
 
-//reference implementation is allBinders :: [TyVar]
-// a,b,..z, a1, b1,... z1, a2, b2,... 
+/// a,b,..z, a1, b1,... z1, a2, b2,... 
 let allBinders =
     let rec loop i =
         match i with
@@ -240,7 +238,7 @@ let rec zonkType typ =
             writeTv tv ty' // "Short out" multiple hops
             ty'
 
-///Quantify over the specified type variables (all flexible)
+/// Quantify over the specified type variables (all flexible)
 let quantify (tvs: MetaTv list) (ty: Rho) =
     let used_bndrs = tyVarBndrs ty  // Avoid quantified type variables in use
     let new_bndrs = List.difference (Seq.toList(Seq.take (List.length tvs) allBinders)) used_bndrs
