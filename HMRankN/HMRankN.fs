@@ -259,4 +259,10 @@ let getEnvTypes env : Typ list =
 let getMetaTyVars tys : MetaTv list = 
     let tys' = List.map zonkType tys
     metaTvs tys'
+
+/// This function takes account of zonking, and returns a set
+/// (no duplicates) of free type variables
+let getFreeTyVars tys =
+     let tys' = List.map zonkType tys
+     freeTyVars tys'
                        
