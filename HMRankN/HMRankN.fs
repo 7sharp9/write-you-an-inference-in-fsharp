@@ -93,7 +93,7 @@ let freeTyVars tys =
         | _bound, MetaTv _, acc -> acc
         | _bound, TyCon _, acc -> acc
         | bound, Fun(arg, res), acc -> go bound arg (go bound res acc)
-        | bound, ForAll(tvs, ty), acc -> go (tvs ++ bound) ty acc
+        | bound, ForAll(tvs, ty), acc -> go (List.append tvs bound) ty acc
     List.foldBack (go []) tys []
 
 ///Get all the binders used in ForAlls in the type, so that
@@ -101,8 +101,8 @@ let freeTyVars tys =
 let tyVarBndrs ty =
     let rec bndrs ty =
         match ty with
-        | ForAll(tvs, body) -> tvs ++ (bndrs body)
-        | Fun(arg, res) -> (bndrs arg) ++ (bndrs res)
+        | ForAll(tvs, body) -> List.append tvs (bndrs body)
+        | Fun(arg, res) -> List.append (bndrs arg) (bndrs res)
         | _ -> []
     List.distinct (bndrs ty)
 
@@ -173,7 +173,11 @@ let newSkolemTyVar tcenv tv =
     SkolemTv((tyVarName tv), uniq)
 
 let writeTv (Meta(_, ref)) (ty: Tau) = 
-    writeTcRef ref (Some ty)
+    ref := (Some ty)
+
+let readTv (metatv: MetaTv) : Tau option =
+    match metatv with
+    | Meta(_, ref) -> !ref
 
 //nstantiate the topmost for-alls of the argument type
 //with flexible type variables
@@ -192,7 +196,7 @@ let rec deepskol tcenv (ty: Sigma) =
     | ForAll(tvs, ty) -> // Rule PRPOLY
         let sks1 = List.map (newSkolemTyVar tcenv) tvs
         let (sks2, ty') = deepskol tcenv (substTy tvs (List.map TyVar sks1) ty)
-        sks1 ++ sks2, ty'
+        List.append sks1 sks2, ty'
     | Fun(arg_ty, res_ty) -> // Rule PRFUN
         let sks, res_ty' = deepskol tcenv res_ty
         sks, Fun(arg_ty, res_ty')
@@ -204,15 +208,49 @@ let shallowskol (ty : Sigma) tcenv =
     | ForAll(tvs, ty) ->
         let sks1 = List.map (newSkolemTyVar tcenv) tvs
         sks1, ty
-    | _ -> [], 
+    | _ -> [], ty
 
 //reference implementation is allBinders :: [TyVar]
 // a,b,..z, a1, b1,... z1, a2, b2,... 
 let allBinders =
-  let rec loop i =
-    match i with
-      | i when i < 26 -> TyVar <| string (char (i + 97))
-      | other -> TyVar <| string (other / 26) + string(char ((other % 26) + 97)) 
-  Seq.initInfinite ( fun i -> loop i  )
+    let rec loop i =
+        match i with
+        | i when i < 26 -> BoundTv <| string (char (i + 97))
+        | other -> BoundTv <| string (other / 26) + string(char ((other % 26) + 97))
+    Seq.initInfinite ( fun i -> loop i  )
 
+/// Eliminate any substitutions in the type
+let rec zonkType typ =
+    match typ with
+    | ForAll(ns, ty) ->
+        let ty' = zonkType ty 
+        ForAll(ns, ty')
+    | Fun(arg, res)  ->
+        let arg' = zonkType arg 
+        let res' = zonkType res
+        Fun(arg', res')
+    | TyCon tc -> TyCon tc
+    | TyVar n -> TyVar n
+    | MetaTv tv -> // A mutable type variable
+        let mb_ty = readTv tv
+        match mb_ty with
+        | None -> MetaTv tv
+        | Some ty ->
+            let ty' = zonkType ty
+            writeTv tv ty' // "Short out" multiple hops
+            ty'
 
+///Quantify over the specified type variables (all flexible)
+let quantify (tvs: MetaTv list) (ty: Rho) =
+    let used_bndrs = tyVarBndrs ty  // Avoid quantified type variables in use
+    let new_bndrs = List.difference (Seq.toList(Seq.take (List.length tvs) allBinders)) used_bndrs
+    let bind (tv, name) = writeTv tv (TyVar name)
+    List.zip tvs new_bndrs |> List.iter bind // 'bind' is just a cunning way of doing the substitution
+    let ty' = zonkType ty
+    ForAll(new_bndrs, ty')
+    
+/// Getting the free tyvars
+let getEnvTypes env : Typ list =
+    // Get just the types mentioned in the environment
+    Map.values env |> Set.toList
+    
