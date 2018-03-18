@@ -314,5 +314,5 @@ and unify ty1 ty2 =
         unify res1 res2
 
     | (TyCon tc1), (TyCon tc2) when tc1 = tc2 -> ()
-    | ty1, ty2 -> failwithf ("Cannot unify types: %A, %A" ty1 ty2
-//TODO: figure out pretty printing error: <+> vcat [ppr ty1, ppr ty2])
+    //TODO: figure out pretty printing error: <+> vcat [ppr ty1, ppr ty2]
+    | ty1, ty2 -> failwithf "Cannot unify types: %A, %A" ty1 ty2
