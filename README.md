@@ -22,5 +22,5 @@ This repo grew out of a small language that I was tinkering with to test out var
 >Considering how many papers there are on type systems, there is surprising little 
 literature on type inference that is aimed unambiguously at implementors.
   
-If you have any suggestions or want to make any contributions I'll happily take any contributions :-)
+If you have any suggestions or want to make any contributions I'll happily take any! :-)
 
