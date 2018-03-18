@@ -263,4 +263,56 @@ let getMetaTyVars tys : MetaTv list =
 let getFreeTyVars tys =
      let tys' = List.map zonkType tys
      freeTyVars tys'
-                       
+
+///Tells which types should never be encountered during unification
+let (|BadType|) : Tau -> bool = function
+    | TyVar(BoundTv _) -> true
+    | _ -> false
+
+/// Raise an occurs-check error
+let occursCheckErr (tv:MetaTv) (ty:Tau) =
+    failwithf "Occurs check for '%A' in %A" tv ty
+  //TODO: work out pretty print
+  //= failTc (text "Occurs check for" <+> quotes (ppr tv) <+> text "in:" <+> ppr ty)
+
+/// Invariant: the flexible type variable tv1 is not bound
+let rec unifyUnboundVar tv1 ty2 =
+    match tv1, ty2 with
+    | tv1, MetaTv tv2 ->
+        // We know that tv1 /= tv2 (else the top case in unify would catch it)
+        let mb_ty2 = readTv tv2
+        match mb_ty2 with
+        | Some ty2' -> unify (MetaTv tv1) ty2'
+        | None  -> writeTv tv1 ty2
+    | _,  _ ->
+        let tvs2 = getMetaTyVars [ty2]
+        if  List.contains tv1 tvs2 then occursCheckErr tv1 ty2
+        else writeTv tv1 ty2
+
+/// Invariant: tv1 is a flexible type variable
+and unifyVar tv1 ty2 =
+// Check whether tv1 is bound
+    let mb_ty1 = readTv tv1
+    match mb_ty1 with
+    | Some ty1 -> unify ty1 ty2
+    | None  -> unifyUnboundVar tv1 ty2
+
+/// unification
+and unify ty1 ty2 =
+    match ty1, ty2 with
+    | BadType _, _ 
+    | _, BadType _ ->  // Compiler error
+        failwithf "Panic! Unexpected types in unification: %A, %A" ty1 ty2
+        //todo figure out pretty printing error: <+> vcat [ppr ty1, ppr ty2])
+    | (TyVar tv1),  (TyVar tv2) when tv1 = tv2 -> ()
+    | (MetaTv tv1), (MetaTv tv2) when tv1 = tv2 -> ()
+    | (MetaTv tv), ty -> unifyVar tv ty
+    | ty, (MetaTv tv) -> unifyVar tv ty
+
+    | Fun(arg1, res1), Fun(arg2, res2) ->
+        unify arg1 arg2
+        unify res1 res2
+
+    | (TyCon tc1), (TyCon tc2) when tc1 = tc2 -> ()
+    | ty1, ty2 -> failwithf ("Cannot unify types: %A, %A" ty1 ty2
+//TODO: figure out pretty printing error: <+> vcat [ppr ty1, ppr ty2])
