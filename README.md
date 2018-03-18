@@ -17,8 +17,7 @@ The algorithms are split into pure and mutable Hindley-Milner type inference and
   * [Mutable implementation with row polymorphism extension](Hindley-Milner-Mutable-Rowpolymorphism.md)
   * [Pure implementation with row polymorphism extension](Hindley-Milner-Pure-Rowpolymorphism.md)
 
-This repo grew out of a small language that I am writing to test out various ideas around type systems and 
-also targeting the arm platform via LLVM.  While reading one of the papers on rank n types I came across the following which is quite true:
+This repo grew out of a small language that I was tinkering with to test out various ideas around type systems and while reading one of the papers on rank n types I came across the following which is quite true:
 
 >Considering how many papers there are on type systems, there is surprising little 
 literature on type inference that is aimed unambiguously at implementors.
