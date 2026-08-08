@@ -335,7 +335,7 @@ let rec private matchFunTy level ty =
         let b = newVar lvl
         tv := Link(TArr(a, b))
         a, b
-    | ty -> typeError "expected a function type but got %A" ty
+    | ty -> typeError "expected a function type but got '%s'" (prettyPrec 0 ty)
 
 // ─── Bidirectional type checking ─────────────────────────────────────────────
 //
