@@ -143,18 +143,27 @@ let rec private occursAdjust id level ty =
 // Unifies monotypes only; TForAll on either side is an error (use subsume instead).
 
 let rec unify ty1 ty2 =
+    let rec containsForAll ty =
+        match shallowNorm ty with
+        | TForAll _ -> true
+        | TArr(a, b) -> containsForAll a || containsForAll b
+        | TVar { contents = Link t } -> containsForAll t
+        | _ -> false
+
     match shallowNorm ty1, shallowNorm ty2 with
     | TConst n1, TConst n2 when n1 = n2 -> ()
     | TArr(a1, b1), TArr(a2, b2)        -> unify a1 a2; unify b1 b2
+    | TForAll _, _
+    | _, TForAll _ ->
+        typeError "unexpected polymorphic type in monotype unification; use subsume"
     | TVar({ contents = Unbound(id, level) } as tv), ty
     | ty, TVar({ contents = Unbound(id, level) } as tv) ->
+        if containsForAll ty then
+            typeError "unexpected polymorphic type in monotype unification; use subsume"
         occursAdjust id level ty
         tv := Link ty
     | TVar { contents = Skolem(_, id1) }, TVar { contents = Skolem(_, id2) }
         when id1 = id2 -> ()
-    | TForAll _, _
-    | _, TForAll _ ->
-        typeError "unexpected polymorphic type in monotype unification; use subsume"
     | t1, t2 ->
         typeError "cannot unify '%s' and '%s'" (prettyPrec 0 t1) (prettyPrec 0 t2)
 
