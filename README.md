@@ -12,6 +12,7 @@ The algorithms are split into pure and mutable Hindley-Milner type inference, an
   * [Pure implmentation with combined constraints and solving](Hindley-Milner-Pure.md)
   * [Pure implmentation with separate constraint gathering and solving](Hindley-Milner-Split-Solver.md)
   * [Mutable implementation with rank optimisations](Hindley-Milner-Mutable.md)
+  * [Arbitrary-rank (rank-n) types with bidirectional type checking](Hindley-Milner-RankN.md)
   
 ## Hindley-Milner inference with row polymorphism
   * [Mutable implementation with row polymorphism extension](Hindley-Milner-Mutable-Rowpolymorphism.md)
