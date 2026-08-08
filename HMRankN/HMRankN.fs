@@ -361,11 +361,13 @@ let rec infer (env : Env) level expr =
     | App(f, arg) ->
         let fTy = infer env level f
         let argTy, retTy = matchFunTy level fTy
-        // Subsumption: the argument's type must be at least as polymorphic as
-        // the parameter type demands.  This is what enables passing a
-        // polymorphic function where a higher-rank type is expected.
-        let argInferred = infer env level arg
-        subsume level argInferred argTy
+        // Infer the argument at level+1 and generalise before calling subsume.
+        // This mirrors the paper's `inferSigma` step: locally-created unification
+        // variables are promoted to Generic nodes so the subsumption escape check
+        // correctly distinguishes them from environment variables.
+        let argMono = infer env (level + 1) arg
+        let argPoly = generalize level argMono |> quantify
+        subsume level argPoly argTy
         retTy
 
     | Let(x, e, body) ->
@@ -384,12 +386,12 @@ and check (env : Env) level expr expectedTy =
     | Lam(x, body), TArr(argTy, retTy) ->
         check (Map.add x argTy env) level body retTy
 
-    // Checking against a forall: skolemise the bound variables and verify
-    // that the expression works for any (rigid) choice of those variables
+    // Checking against a forall: infer and generalise the expression's type first,
+    // then delegate to subsume which contains the correct escape check.
     | expr, TForAll _ ->
-        let _, skIds, body = skolemise expectedTy
-        check env level expr body
-        checkNoEscape skIds body
+        let inferredMono = infer env (level + 1) expr
+        let inferredPoly = generalize level inferredMono |> quantify
+        subsume level inferredPoly expectedTy
 
     // Fall through: infer a type and then check subsumption
     | expr, ty ->

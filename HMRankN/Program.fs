@@ -42,9 +42,9 @@ let main _ =
     run "fun x y -> x"
         (Lam("x", Lam("y", Var "x")))
 
-    // let f = fun x -> x in f
+    // let id = fun x -> x in id
     run "let id = fun x -> x in id"
-        (Let("f", Lam("x", Var "x"), Var "f"))
+        (Let("id", Lam("x", Var "x"), Var "id"))
 
     // let id = fun x -> x in id id
     run "let id = fun x -> x in id id"
@@ -98,6 +98,15 @@ let main _ =
                 Lam("f", App(Var "f", Lit(LInt 42))),
                 polyId --> TConst "Int"),
             Var "id"))
+
+    // A lambda can also be passed directly without naming it in a let.
+    // This requires the generalisation step in App to work correctly.
+    run "applyToInt (fun x -> x)"
+        (App(
+            Ann(
+                Lam("f", App(Var "f", Lit(LInt 42))),
+                polyId --> TConst "Int"),
+            Lam("x", Var "x")))
 
     // Demonstrate that a monomorphic function is NOT accepted where
     // a polymorphic one is expected.
