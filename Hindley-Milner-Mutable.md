@@ -14,4 +14,4 @@ All code is in a self contained project:
 [HMMutable](HMMutable/)
 
 ## References
-[Didier Rémy: Extension of ML Type System with a Sorted Equational Theory on Types](ftp://ftp.inria.fr/INRIA/Projects/cristal/Didier.Remy/eq-theory-on-types.ps.gz)
+[Didier Rémy: Extension of ML Type System with a Sorted Equational Theory on Types](http://gallium.inria.fr/~remy/ftp/eq-theory-on-types.pdf)

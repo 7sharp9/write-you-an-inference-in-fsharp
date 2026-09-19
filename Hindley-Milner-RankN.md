@@ -41,7 +41,7 @@ GHC's `RankNTypes` (and `Rank2Types`) extension exposes exactly this capability.
 
 The implementation is based on
 
-> Peyton Jones, S. & Shields, M. (2007).
+> Peyton Jones, S., Vytiniotis, D., Weirich, S. & Shields, M. (2007).
 > *Practical Type Inference for Arbitrary-Rank Types.*
 > Journal of Functional Programming 17(1), pp. 1–82.
 
@@ -175,8 +175,8 @@ rank3 : ((forall a. a -> a) -> Int) -> Int
 
 ## References
 
-* Peyton Jones, S. & Shields, M. (2007). *Practical Type Inference for Arbitrary-Rank
-  Types.* Journal of Functional Programming 17(1), pp. 1–82.
+* Peyton Jones, S., Vytiniotis, D., Weirich, S. & Shields, M. (2007). *Practical Type
+  Inference for Arbitrary-Rank Types.* Journal of Functional Programming 17(1), pp. 1–82.
   <https://www.microsoft.com/en-us/research/publication/practical-type-inference-for-arbitrary-rank-types/>
 
 * Vytiniotis, D., Peyton Jones, S., & Schrijvers, T. (2010). *Let Should Not Be

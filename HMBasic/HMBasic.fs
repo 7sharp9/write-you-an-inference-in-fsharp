@@ -1,7 +1,6 @@
 module HMBasic
 open System
 open System.Collections
-open ExtCore
 
 //An implementation of the Hindley Milner type checking algorithm
 //based on the Scala code by Andrew Forrest, the Perl code by
@@ -50,15 +49,18 @@ let makeVariable () =
   nextVariableId := !nextVariableId + 1
   TypeVariable(newVar)
 
-let nextUniqueName = ref "a"
+let nextUniqueName = ref 0
 
 let variableName (v: tyvar) : string =
   match v with
   | { name = Some(name) } -> name
   | { name = None } ->
-      let newVarName = !nextUniqueName
+      let i = !nextUniqueName
+      let newVarName =
+        if i >= 26 then string (char (97 + i % 26)) + string (i / 26)
+        else string (char (97 + i % 26))
       v.name <- Some(newVarName)
-      nextUniqueName := string (int (!nextUniqueName).[0] + 1)
+      nextUniqueName := i + 1
       newVarName
 
 module ty =

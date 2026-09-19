@@ -5,25 +5,25 @@ open HMMutable
 let main argv =
 
     let example1 =
-        "let f = fun x y -> g(x, y) in f(a, b)",
+        "fun a -> a",
         Fun([("a")], Var(("a") ))
 
     let example2 =
-        "fun f -> (fun g -> (fun arg (f g arg)))",
-        Fun(["f"], 
-            Fun(["g"], 
-                Fun (["arg"], 
+        "fun f -> fun g -> fun arg -> g(f(arg))",
+        Fun(["f"],
+            Fun(["g"],
+                Fun (["arg"],
                     Call(Var "g",[Call(Var "f", [Var "arg"])])
                 )
             )
         )
 
     let example3 =
-        "fun (a,b) -> a",
+        "fun a b -> a",
         Fun(["a"; "b"], Var(("a") ))
 
     let example4 =
-        "let f a b = a",
+        "fun a -> fun b -> a",
         Fun( ["a"], Fun(["b"], Var "a"))
 
     let example5 =
@@ -40,7 +40,7 @@ let main argv =
                                        if printResult then
                                             printfn "%s" name
                                             printfn "Expression: %s" (HMMutable.exp.toString exp)
-                                            printfn "Infered: %s\n" (HMMutable.ty.toString generalizedTy) )
+                                            printfn "Inferred: %s\n" (HMMutable.ty.toString generalizedTy) )
 
     //run through the tests as a warm up
     runTestBank testBank true

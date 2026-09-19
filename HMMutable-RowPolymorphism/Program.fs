@@ -5,7 +5,7 @@ open HMMutableRowpolymorphism
 let main argv =
 
     let example1 =
-        "let f = fun x y -> g(x, y) in f(a, b)",
+        "fun a -> a",
         Fun([("a")], Var(("a") ))
 
     let example2 =
@@ -19,11 +19,11 @@ let main argv =
         )
 
     let example3 =
-        "fun (a,b) -> a",
+        "fun a b -> a",
         Fun(["a"; "b"], Var(("a") ))
 
     let example4 =
-        "let f a b = a",
+        "fun a -> fun b -> a",
         Fun( ["a"], Fun(["b"], Var "a"))
 
     let example5 =
@@ -114,17 +114,22 @@ let main argv =
          example12
          example13
          example14
-         example15]
+         example15
+         recordRecurse]
 
     let runTestBank bank printResult =
       bank
-      |> List.iter (fun (name, exp) -> resetId()
-                                       let ty = infer basicEnv 0 exp
-                                       let generalizedTy = generalize (-1) ty 
-                                       if printResult then
-                                            printfn "%s" name
-                                            printfn "Expression: %s" (HMMutableRowpolymorphism.exp.toString exp)
-                                            printfn "Infered: %s\n" (HMMutableRowpolymorphism.ty.toString generalizedTy) )
+      |> List.iter (fun (name, exp) ->
+            resetId()
+            let result =
+              try Ok (generalize (-1) (infer basicEnv 0 exp))
+              with ex -> Result.Error ex.Message
+            if printResult then
+                 printfn "%s" name
+                 printfn "Expression: %s" (HMMutableRowpolymorphism.exp.toString exp)
+                 match result with
+                 | Ok generalizedTy -> printfn "Inferred: %s\n" (HMMutableRowpolymorphism.ty.toString generalizedTy)
+                 | Result.Error error -> printfn "Inferred: %s\n" error )
 
     //run through the tests as a warm up
     runTestBank testBank true
